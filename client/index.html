@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>魔塔 · Tower of Doom</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #14121a;
+        color: #f2ecf9;
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        height: 100%;
+      }
+      #lobby {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        gap: 16px;
+      }
+      #lobby h1 { font-size: 2rem; margin: 0; }
+      #lobby p { color: #b4a9c9; margin: 0; }
+      #nameInput {
+        padding: 10px 14px;
+        font-size: 1rem;
+        border-radius: 8px;
+        border: 1px solid #4a3f63;
+        background: #211c2e;
+        color: #f2ecf9;
+        width: 220px;
+      }
+      #joinBtn {
+        padding: 10px 24px;
+        font-size: 1rem;
+        border-radius: 8px;
+        border: none;
+        background: #8338ec;
+        color: white;
+        cursor: pointer;
+      }
+      #joinBtn:hover { background: #9d5cf5; }
+      #status { color: #e63946; min-height: 1.2em; }
+      #app {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+      }
+      #hud {
+        display: flex;
+        gap: 18px;
+        padding: 8px 16px;
+        background: #211c2e;
+        width: 100%;
+        max-width: 640px;
+        box-sizing: border-box;
+        font-size: 0.95rem;
+        flex-wrap: wrap;
+      }
+      #hud span b { color: #ffbe0b; }
+      #gameContainer { line-height: 0; }
+      #log {
+        width: 100%;
+        max-width: 640px;
+        max-height: 90px;
+        overflow-y: auto;
+        background: #1a1626;
+        padding: 6px 12px;
+        box-sizing: border-box;
+        font-size: 0.85rem;
+        color: #cbb;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="lobby">
+      <h1>魔塔 · Tower of Doom</h1>
+      <p>输入你的名字，加入同一座塔与好友合作攀登</p>
+      <input id="nameInput" maxlength="16" placeholder="勇者的名字" />
+      <button id="joinBtn">加入游戏</button>
+      <div id="status"></div>
+    </div>
+    <div id="app">
+      <div id="hud"></div>
+      <div id="gameContainer"></div>
+      <div id="log"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

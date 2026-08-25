@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+**/dist
+.git
+production
+design
+docs
+.claude
+*.md

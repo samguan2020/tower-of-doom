@@ -1,0 +1,24 @@
+{
+  "name": "tower-of-doom",
+  "private": true,
+  "version": "0.1.0",
+  "description": "魔塔 (Tower of Doom) - real-time co-op multiplayer tower climber",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w shared",
+    "build:server": "npm run build -w server",
+    "build:client": "npm run build -w client",
+    "build": "npm run build:shared && npm run build:server && npm run build:client",
+    "dev:server": "npm run dev -w server",
+    "dev:client": "npm run dev -w client",
+    "test": "npm run test -w shared",
+    "start": "npm run start -w server"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}
