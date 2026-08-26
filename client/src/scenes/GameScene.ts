@@ -23,6 +23,7 @@ export class GameScene extends Phaser.Scene {
   private keyD!: Phaser.Input.Keyboard.Key;
   private lastMoveAt = 0;
   private dirty = true;
+  private touchDir?: Direction;
   private hudEl = document.getElementById("hud") as HTMLDivElement;
   private logEl = document.getElementById("log") as HTMLDivElement;
 
@@ -36,6 +37,14 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.tileLayer = this.add.graphics();
+    this.hudEl.textContent = "等待游戏数据同步...";
+
+    this.room.onError((code, message) => {
+      this.hudEl.textContent = `房间错误 (${code}): ${message ?? "未知"}`;
+    });
+    this.room.onLeave((code) => {
+      this.hudEl.textContent = `已断线 (code ${code})，请刷新页面重新加入`;
+    });
 
     const keyboard = this.input.keyboard;
     if (keyboard) {
@@ -79,6 +88,36 @@ export class GameScene extends Phaser.Scene {
     });
 
     onServerEvent(this.room, (event) => this.handleEvent(event));
+    this.setupDpad();
+
+    setTimeout(() => {
+      if (this.renderedFloorId === -1) {
+        this.hudEl.textContent = "长时间未收到游戏状态数据，可能是网络不稳定，请尝试刷新页面或更换网络";
+      }
+    }, 6000);
+  }
+
+  private setupDpad(): void {
+    const bind = (id: string, dir: Direction) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const start = (e: Event) => {
+        e.preventDefault();
+        this.touchDir = dir;
+      };
+      const end = (e: Event) => {
+        e.preventDefault();
+        if (this.touchDir === dir) this.touchDir = undefined;
+      };
+      el.addEventListener("pointerdown", start);
+      el.addEventListener("pointerup", end);
+      el.addEventListener("pointercancel", end);
+      el.addEventListener("pointerleave", end);
+    };
+    bind("dpadUp", { dx: 0, dy: -1 });
+    bind("dpadDown", { dx: 0, dy: 1 });
+    bind("dpadLeft", { dx: -1, dy: 0 });
+    bind("dpadRight", { dx: 1, dy: 0 });
   }
 
   update(time: number): void {
@@ -90,7 +129,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleInput(time: number): void {
-    if (!this.cursors) return;
     if (time - this.lastMoveAt < MOVE_COOLDOWN_MS) return;
 
     const dir = this.readDirection();
@@ -101,6 +139,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private readDirection(): Direction | undefined {
+    if (this.touchDir) return this.touchDir;
+    if (!this.cursors) return undefined;
     if (this.cursors.left.isDown || this.keyA.isDown) return { dx: -1, dy: 0 };
     if (this.cursors.right.isDown || this.keyD.isDown) return { dx: 1, dy: 0 };
     if (this.cursors.up.isDown || this.keyW.isDown) return { dx: 0, dy: -1 };
@@ -136,6 +176,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private render(): void {
+    if (!this.room.state?.players || !this.room.state.floors) return;
     const localPlayer = this.room.state.players.get(this.room.sessionId);
     if (!localPlayer) return;
 

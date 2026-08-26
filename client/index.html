@@ -72,9 +72,50 @@
         font-size: 0.85rem;
         color: #cbb;
       }
+      #dpad {
+        display: none;
+        grid-template-columns: repeat(3, 56px);
+        grid-template-rows: repeat(3, 56px);
+        gap: 6px;
+        margin: 14px 0;
+        touch-action: none;
+      }
+      #dpad button {
+        border: 1px solid #4a3f63;
+        background: #211c2e;
+        color: #f2ecf9;
+        font-size: 1.4rem;
+        border-radius: 10px;
+        touch-action: none;
+        user-select: none;
+      }
+      #dpad button:active { background: #8338ec; }
+      #dpadUp { grid-column: 2; grid-row: 1; }
+      #dpadLeft { grid-column: 1; grid-row: 2; }
+      #dpadRight { grid-column: 3; grid-row: 2; }
+      #dpadDown { grid-column: 2; grid-row: 3; }
+      @media (pointer: coarse) {
+        #dpad { display: grid; }
+      }
+      #errorBanner {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        background: #b3261e;
+        color: white;
+        font-size: 0.8rem;
+        padding: 6px 10px;
+        word-break: break-word;
+        max-height: 40vh;
+        overflow-y: auto;
+      }
     </style>
   </head>
   <body>
+    <div id="errorBanner"></div>
     <div id="lobby">
       <h1>魔塔 · Tower of Doom</h1>
       <p>输入你的名字，加入同一座塔与好友合作攀登</p>
@@ -85,6 +126,12 @@
     <div id="app">
       <div id="hud"></div>
       <div id="gameContainer"></div>
+      <div id="dpad">
+        <button id="dpadUp">▲</button>
+        <button id="dpadLeft">◀</button>
+        <button id="dpadRight">▶</button>
+        <button id="dpadDown">▼</button>
+      </div>
       <div id="log"></div>
     </div>
     <script type="module" src="/src/main.ts"></script>

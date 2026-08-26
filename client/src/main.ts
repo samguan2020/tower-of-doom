@@ -7,6 +7,28 @@ const app = document.getElementById("app") as HTMLDivElement;
 const nameInput = document.getElementById("nameInput") as HTMLInputElement;
 const joinBtn = document.getElementById("joinBtn") as HTMLButtonElement;
 const statusEl = document.getElementById("status") as HTMLDivElement;
+const errorBanner = document.getElementById("errorBanner") as HTMLDivElement;
+
+function reportError(text: string): void {
+  errorBanner.style.display = "block";
+  const line = document.createElement("div");
+  line.textContent = text;
+  errorBanner.appendChild(line);
+}
+
+window.addEventListener("error", (e) => {
+  reportError(`页面错误: ${e.message} (${e.filename ?? ""}:${e.lineno ?? ""})`);
+});
+window.addEventListener("unhandledrejection", (e) => {
+  reportError(`未处理的错误: ${String(e.reason)}`);
+});
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`超时(${ms / 1000}秒)未连上服务器`)), ms)),
+  ]);
+}
 
 async function join(): Promise<void> {
   const name = nameInput.value.trim() || "勇者";
@@ -14,7 +36,7 @@ async function join(): Promise<void> {
   statusEl.textContent = "连接中...";
 
   try {
-    const room = await joinTowerRoom(name);
+    const room = await withTimeout(joinTowerRoom(name), 10000);
     lobby.style.display = "none";
     app.style.display = "flex";
 
@@ -30,7 +52,8 @@ async function join(): Promise<void> {
     game.scene.add("Game", GameScene, true, { room });
   } catch (err) {
     console.error(err);
-    statusEl.textContent = "连接失败，请确认服务器正在运行后重试";
+    const detail = err instanceof Error ? err.message : String(err);
+    statusEl.textContent = `连接失败: ${detail}`;
     joinBtn.disabled = false;
   }
 }

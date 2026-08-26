@@ -10,6 +10,12 @@ param containerImage string = 'mcr.microsoft.com/azuredocs/containerapps-hellowo
 @description('Colyseus rooms keep authoritative state in memory on a single process. Do NOT raise this above 1 without adding a shared state store (e.g. Redis presence/driver) — otherwise players get split across instances with divergent tower state.')
 param maxReplicas int = 1
 
+@description('Whether to wire up the ACR registry credential (system identity) on the container app. Must stay false on the very first deploy: the AcrPull role assignment below depends on the container app identity, so it does not exist yet, and pointing the revision at an unauthorized private registry causes provisioning to hang and fail with "Operation expired". Flip to true (redeploy or `az containerapp update`) once the role assignment has had time to propagate after a first successful deploy.')
+param useAcrRegistry bool = false
+
+@description('Port the container listens on. The placeholder image (mcr.microsoft.com/azuredocs/containerapps-helloworld) listens on 80; the real Tower of Doom image listens on 8080 (see Dockerfile/server PORT env var). Must match whichever image `containerImage` points to, or the ingress startup probe gets "connection refused" and the revision never becomes healthy.')
+param containerTargetPort int = 80
+
 var acrName = toLower(replace('${appName}acr${uniqueString(resourceGroup().id)}', '-', ''))
 var logAnalyticsName = '${appName}-logs'
 var envName = '${appName}-env'
@@ -63,16 +69,20 @@ resource containerApp 'Microsoft.App/containerApps@2023-11-02-preview' = {
     configuration: {
       ingress: {
         external: true
-        targetPort: 8080
-        transport: 'auto'
+        targetPort: containerTargetPort
+        // 'auto' can negotiate HTTP/2 with some clients (notably mobile browsers), and
+        // WebSocket-over-HTTP/2 (RFC 8441) upgrades aren't reliably supported end to end —
+        // Colyseus clients on those connections hang forever waiting to join a room. Force
+        // HTTP/1.1 so the WebSocket upgrade always works.
+        transport: 'http'
         allowInsecure: false
       }
-      registries: [
+      registries: useAcrRegistry ? [
         {
           server: acr.properties.loginServer
           identity: 'system'
         }
-      ]
+      ] : []
     }
     template: {
       containers: [
