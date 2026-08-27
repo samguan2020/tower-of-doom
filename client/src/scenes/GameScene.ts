@@ -1,7 +1,8 @@
 import type { Room } from "colyseus.js";
 import Phaser from "phaser";
-import { TileType, getFloor, type FloorDef, type FloorState, type ServerEvent, type TowerState } from "@tower/shared";
+import { CHARACTER_IDS, TileType, getFloor, type CharacterId, type FloorDef, type FloorState, type ServerEvent, type TowerState } from "@tower/shared";
 import { onServerEvent, watchState } from "../net/NetworkClient.js";
+import { characterTextureKey } from "../render/characterArt.js";
 import { ITEM_COLORS, ITEM_GLYPH, TILE_COLORS } from "../render/tileColors.js";
 
 const TILE = 48;
@@ -11,6 +12,7 @@ type Direction = { dx: -1 | 0 | 1; dy: -1 | 0 | 1 };
 
 export class GameScene extends Phaser.Scene {
   private room!: Room<TowerState>;
+  private characterIcons!: Record<CharacterId, HTMLCanvasElement>;
   private tileLayer!: Phaser.GameObjects.Graphics;
   private renderedFloorId = -1;
   private monsterNodes = new Map<string, Phaser.GameObjects.Container>();
@@ -31,11 +33,19 @@ export class GameScene extends Phaser.Scene {
     super("Game");
   }
 
-  init(data: { room: Room<TowerState> }): void {
+  init(data: { room: Room<TowerState>; characterIcons: Record<CharacterId, HTMLCanvasElement> }): void {
     this.room = data.room;
+    this.characterIcons = data.characterIcons;
   }
 
   create(): void {
+    for (const character of CHARACTER_IDS) {
+      const key = characterTextureKey(character);
+      if (!this.textures.exists(key)) {
+        this.textures.addCanvas(key, this.characterIcons[character]);
+      }
+    }
+
     this.tileLayer = this.add.graphics();
     this.hudEl.textContent = "等待游戏数据同步...";
 
@@ -245,7 +255,7 @@ export class GameScene extends Phaser.Scene {
       let node = this.playerNodes.get(sessionId);
       const isLocal = sessionId === this.room.sessionId;
       if (!node) {
-        node = this.createEntityNode(player.color, player.name.slice(0, 1), 20, isLocal);
+        node = this.createPlayerNode(player.character as CharacterId, player.color, isLocal);
         this.playerNodes.set(sessionId, node);
       }
       node.setPosition(player.x * TILE + TILE / 2, player.y * TILE + TILE / 2);
@@ -285,6 +295,13 @@ export class GameScene extends Phaser.Scene {
     }
     const text = this.add.text(0, 0, label, { fontSize: "16px", color: "#ffffff" }).setOrigin(0.5);
     return this.add.container(0, 0, [circle, text]);
+  }
+
+  private createPlayerNode(character: CharacterId, color: number, highlight: boolean): Phaser.GameObjects.Container {
+    const ring = this.add.circle(0, 0, 21, color, 0.2);
+    ring.setStrokeStyle(highlight ? 3 : 2, highlight ? 0xffffff : color);
+    const icon = this.add.image(0, 0, characterTextureKey(character)).setDisplaySize(34, 34);
+    return this.add.container(0, 0, [ring, icon]);
   }
 
   private updateHud(player: { name: string; hp: number; maxHp: number; atk: number; def: number; gold: number; floorId: number; keysYellow: number; keysBlue: number; keysRed: number; victorious: boolean }): void {

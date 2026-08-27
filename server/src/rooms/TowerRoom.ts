@@ -1,20 +1,30 @@
 import { Room, type Client } from "@colyseus/core";
 import {
+  CHARACTER_IDS,
+  MAX_PLAYERS,
   PLAYER_COLORS,
   PlayerSchema,
   STARTING_PLAYER_STATS,
   TowerState,
   getFloor,
+  type CharacterId,
   type MoveMessage,
 } from "@tower/shared";
 import { applyMove, ensureFloorRuntime } from "../gameLogic/applyMove.js";
 
 interface JoinOptions {
   name?: string;
+  character?: CharacterId;
+}
+
+function resolveCharacter(character: unknown): CharacterId {
+  return (CHARACTER_IDS as readonly string[]).includes(character as string)
+    ? (character as CharacterId)
+    : "warrior";
 }
 
 export class TowerRoom extends Room<TowerState> {
-  maxClients = 8;
+  maxClients = MAX_PLAYERS;
 
   onCreate(): void {
     this.setState(new TowerState());
@@ -37,6 +47,7 @@ export class TowerRoom extends Room<TowerState> {
     const floor1 = getFloor(1);
     const player = new PlayerSchema();
     player.name = options?.name?.slice(0, 16) || `勇者${client.sessionId.slice(0, 4)}`;
+    player.character = resolveCharacter(options?.character);
     player.color = PLAYER_COLORS[this.state.players.size % PLAYER_COLORS.length];
     player.floorId = floor1.id;
     player.x = floor1.spawnFromBelow.x;

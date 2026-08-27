@@ -23,6 +23,11 @@ math before you commit to it.
 
 ## 3. Detailed Rules
 
+- The room holds at most `MAX_PLAYERS` (2) clients. Before joining, each
+  player picks one of two characters — 公主 (Princess) or 勇士 (Warrior) —
+  purely cosmetic (same starting stats, see Formulas), rendered as a distinct
+  icon in the tower. Either character may be picked by either or both
+  players; there is no uniqueness constraint.
 - Movement is 4-directional, one grid tile per input, throttled client-side
   to one move per `MOVE_COOLDOWN_MS` (150ms) to keep network traffic sane.
 - Each floor is an 8x8 grid of tiles: wall, floor, stair-up, stair-down, or a

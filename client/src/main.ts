@@ -1,4 +1,6 @@
+import type { CharacterId } from "@tower/shared";
 import Phaser from "phaser";
+import { CHARACTER_SVG, rasterizeCharacterIcons } from "./render/characterArt.js";
 import { joinTowerRoom } from "./net/NetworkClient.js";
 import { GameScene } from "./scenes/GameScene.js";
 
@@ -8,6 +10,20 @@ const nameInput = document.getElementById("nameInput") as HTMLInputElement;
 const joinBtn = document.getElementById("joinBtn") as HTMLButtonElement;
 const statusEl = document.getElementById("status") as HTMLDivElement;
 const errorBanner = document.getElementById("errorBanner") as HTMLDivElement;
+const charCards = document.querySelectorAll<HTMLButtonElement>(".charCard");
+
+let selectedCharacter: CharacterId | undefined;
+
+document.getElementById("iconPrincess")!.innerHTML = CHARACTER_SVG.princess;
+document.getElementById("iconWarrior")!.innerHTML = CHARACTER_SVG.warrior;
+
+charCards.forEach((card) => {
+  card.addEventListener("click", () => {
+    selectedCharacter = card.dataset.character as CharacterId;
+    charCards.forEach((c) => c.classList.toggle("selected", c === card));
+    joinBtn.disabled = false;
+  });
+});
 
 function reportError(text: string): void {
   errorBanner.style.display = "block";
@@ -31,25 +47,36 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 async function join(): Promise<void> {
+  if (!selectedCharacter) {
+    statusEl.textContent = "请先选择角色（公主或勇士）";
+    return;
+  }
   const name = nameInput.value.trim() || "勇者";
   joinBtn.disabled = true;
   statusEl.textContent = "连接中...";
 
   try {
-    const room = await withTimeout(joinTowerRoom(name), 10000);
+    const [room, characterIcons] = await withTimeout(
+      Promise.all([joinTowerRoom(name, selectedCharacter), rasterizeCharacterIcons()]),
+      10000,
+    );
     lobby.style.display = "none";
     app.style.display = "flex";
 
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 384,
-      height: 384,
       parent: "gameContainer",
       backgroundColor: "#14121a",
+      scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 384,
+        height: 384,
+      },
       scene: [],
     };
     const game = new Phaser.Game(config);
-    game.scene.add("Game", GameScene, true, { room });
+    game.scene.add("Game", GameScene, true, { room, characterIcons });
   } catch (err) {
     console.error(err);
     const detail = err instanceof Error ? err.message : String(err);

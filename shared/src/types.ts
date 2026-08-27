@@ -1,5 +1,7 @@
 import type { KeyColorId, TileCode } from "./tileTypes.js";
 
+export type CharacterId = "princess" | "warrior";
+
 export type ItemType =
   | "potion_small"
   | "potion_big"

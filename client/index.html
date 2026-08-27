@@ -2,27 +2,41 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>魔塔 · Tower of Doom</title>
     <style>
+      :root {
+        --game-width: 384px;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
       html, body {
         margin: 0;
         padding: 0;
         background: #14121a;
         color: #f2ecf9;
         font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-        height: 100%;
+        min-height: 100%;
+        overflow-x: hidden;
+        overscroll-behavior: none;
+        touch-action: manipulation;
       }
       #lobby {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 100vh;
+        min-height: 100vh;
+        min-height: 100dvh;
         gap: 16px;
+        padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+        width: 100%;
+        text-align: center;
       }
-      #lobby h1 { font-size: 2rem; margin: 0; }
-      #lobby p { color: #b4a9c9; margin: 0; }
+      #lobby h1 { font-size: clamp(1.4rem, 6vw, 2rem); margin: 0; }
+      #lobby p { color: #b4a9c9; margin: 0; font-size: clamp(0.85rem, 3.2vw, 1rem); }
       #nameInput {
         padding: 10px 14px;
         font-size: 1rem;
@@ -30,7 +44,7 @@
         border: 1px solid #4a3f63;
         background: #211c2e;
         color: #f2ecf9;
-        width: 220px;
+        width: min(220px, 100%);
       }
       #joinBtn {
         padding: 10px 24px;
@@ -41,43 +55,84 @@
         color: white;
         cursor: pointer;
       }
-      #joinBtn:hover { background: #9d5cf5; }
-      #status { color: #e63946; min-height: 1.2em; }
+      #joinBtn:hover:not(:disabled) { background: #9d5cf5; }
+      #joinBtn:disabled { background: #4a3f63; cursor: not-allowed; }
+      #charSelect {
+        display: flex;
+        gap: 14px;
+      }
+      .charCard {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        width: clamp(76px, 24vw, 96px);
+        padding: 10px 8px;
+        border-radius: 12px;
+        border: 2px solid #4a3f63;
+        background: #211c2e;
+        color: #f2ecf9;
+        cursor: pointer;
+      }
+      .charCard:hover { border-color: #9d5cf5; }
+      .charCard.selected { border-color: #ffbe0b; background: #2b2438; }
+      .charCard .charIcon {
+        width: clamp(44px, 16vw, 56px);
+        height: clamp(44px, 16vw, 56px);
+      }
+      .charCard .charIcon svg { width: 100%; height: 100%; display: block; }
+      .charCard span { font-size: 0.9rem; }
+      #status { color: #e63946; min-height: 1.2em; font-size: 0.9rem; }
       #app {
         display: none;
         flex-direction: column;
         align-items: center;
+        width: 100%;
+        min-height: 100vh;
+        min-height: 100dvh;
+        padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+        gap: 8px;
       }
       #hud {
         display: flex;
-        gap: 18px;
-        padding: 8px 16px;
+        gap: 12px;
+        padding: 8px 12px;
         background: #211c2e;
-        width: 100%;
-        max-width: 640px;
+        width: min(var(--game-width), 92vw);
         box-sizing: border-box;
-        font-size: 0.95rem;
+        font-size: clamp(0.75rem, 2.8vw, 0.95rem);
         flex-wrap: wrap;
+        justify-content: center;
+        border-radius: 8px;
       }
       #hud span b { color: #ffbe0b; }
-      #gameContainer { line-height: 0; }
+      #gameContainer {
+        width: min(var(--game-width), 92vw);
+        aspect-ratio: 1 / 1;
+        line-height: 0;
+      }
+      #gameContainer canvas {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+      }
       #log {
-        width: 100%;
-        max-width: 640px;
+        width: min(var(--game-width), 92vw);
         max-height: 90px;
         overflow-y: auto;
         background: #1a1626;
         padding: 6px 12px;
         box-sizing: border-box;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #cbb;
+        border-radius: 8px;
       }
       #dpad {
         display: none;
         grid-template-columns: repeat(3, 56px);
         grid-template-rows: repeat(3, 56px);
         gap: 6px;
-        margin: 14px 0;
+        margin: 4px 0;
         touch-action: none;
       }
       #dpad button {
@@ -118,9 +173,19 @@
     <div id="errorBanner"></div>
     <div id="lobby">
       <h1>魔塔 · Tower of Doom</h1>
-      <p>输入你的名字，加入同一座塔与好友合作攀登</p>
-      <input id="nameInput" maxlength="16" placeholder="勇者的名字" />
-      <button id="joinBtn">加入游戏</button>
+      <p>输入你的名字，选择角色，与好友（共1-2人）合作攀登同一座塔</p>
+      <input id="nameInput" maxlength="16" placeholder="玩家的名字" />
+      <div id="charSelect">
+        <button type="button" class="charCard" data-character="princess">
+          <div class="charIcon" id="iconPrincess"></div>
+          <span>公主</span>
+        </button>
+        <button type="button" class="charCard" data-character="warrior">
+          <div class="charIcon" id="iconWarrior"></div>
+          <span>勇士</span>
+        </button>
+      </div>
+      <button id="joinBtn" disabled>加入游戏</button>
       <div id="status"></div>
     </div>
     <div id="app">
