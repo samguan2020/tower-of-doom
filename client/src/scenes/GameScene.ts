@@ -3,7 +3,7 @@ import Phaser from "phaser";
 import { CHARACTER_IDS, TileType, getFloor, type CharacterId, type FloorDef, type FloorState, type ServerEvent, type TowerState } from "@tower/shared";
 import { onServerEvent, watchState } from "../net/NetworkClient.js";
 import { characterTextureKey } from "../render/characterArt.js";
-import { ITEM_COLORS, ITEM_GLYPH, TILE_COLORS } from "../render/tileColors.js";
+import { describeItemEffect, ITEM_COLORS, ITEM_GLYPH, ITEM_NAME, TILE_COLORS } from "../render/tileColors.js";
 
 const TILE = 48;
 const MOVE_COOLDOWN_MS = 150;
@@ -28,6 +28,10 @@ export class GameScene extends Phaser.Scene {
   private touchDir?: Direction;
   private hudEl = document.getElementById("hud") as HTMLDivElement;
   private logEl = document.getElementById("log") as HTMLDivElement;
+  private tooltip!: Phaser.GameObjects.Container;
+  private tooltipText!: Phaser.GameObjects.Text;
+  private tooltipBg!: Phaser.GameObjects.Rectangle;
+  private tooltipHideAt = 0;
 
   constructor() {
     super("Game");
@@ -48,6 +52,15 @@ export class GameScene extends Phaser.Scene {
 
     this.tileLayer = this.add.graphics();
     this.hudEl.textContent = "等待游戏数据同步...";
+
+    this.tooltipText = this.add
+      .text(0, 0, "", { fontSize: "13px", color: "#ffffff", align: "center" })
+      .setOrigin(0.5);
+    const pad = 8;
+    this.tooltipBg = this.add
+      .rectangle(0, 0, this.tooltipText.width + pad * 2, this.tooltipText.height + pad * 2, 0x14121a, 0.92)
+      .setStrokeStyle(1, 0x8338ec);
+    this.tooltip = this.add.container(0, 0, [this.tooltipBg, this.tooltipText]).setDepth(1000).setVisible(false);
 
     this.room.onError((code, message) => {
       this.hudEl.textContent = `房间错误 (${code}): ${message ?? "未知"}`;
@@ -94,6 +107,9 @@ export class GameScene extends Phaser.Scene {
       $(floor).doorsOpen.onAdd(() => {
         this.dirty = true;
       });
+      $(floor).onChange(() => {
+        this.dirty = true;
+      });
       this.dirty = true;
     });
 
@@ -136,6 +152,22 @@ export class GameScene extends Phaser.Scene {
       this.dirty = false;
       this.render();
     }
+    if (this.tooltip.visible && time > this.tooltipHideAt) {
+      this.tooltip.setVisible(false);
+    }
+  }
+
+  private showTooltip(worldX: number, worldY: number, text: string): void {
+    this.tooltipText.setText(text);
+    const pad = 8;
+    this.tooltipBg.setSize(this.tooltipText.width + pad * 2, this.tooltipText.height + pad * 2);
+    const canvasWidth = this.scale.width;
+    const halfW = this.tooltipBg.width / 2;
+    const x = Phaser.Math.Clamp(worldX, halfW + 2, canvasWidth - halfW - 2);
+    const y = Math.max(worldY - 34, this.tooltipBg.height / 2 + 2);
+    this.tooltip.setPosition(x, y);
+    this.tooltip.setVisible(true);
+    this.tooltipHideAt = this.time.now + 2500;
   }
 
   private handleInput(time: number): void {
@@ -167,9 +199,12 @@ export class GameScene extends Phaser.Scene {
       case "unwinnable":
         line = `⚠️ 打不过 ${event.monsterName}（会被打死，先去变强吧）`;
         break;
-      case "itemPickup":
-        line = `✨ 拾取了 ${event.itemType}`;
+      case "itemPickup": {
+        const name = ITEM_NAME[event.itemType] ?? event.itemType;
+        const effect = describeItemEffect(event.itemType, event.value);
+        line = `✨ 拾取了 ${name}${effect ? `，${effect}` : ""}`;
         break;
+      }
       case "floorChange":
         line = `🪜 前往第 ${event.floorId} 层`;
         break;
@@ -212,7 +247,8 @@ export class GameScene extends Phaser.Scene {
         monsterIds.add(monster.id);
         let node = this.monsterNodes.get(monster.id);
         if (!node) {
-          node = this.createEntityNode(0x8b0000, monster.name.slice(0, 1));
+          const tooltip = `${monster.name}\nHP ${monster.hp} 攻 ${monster.atk} 防 ${monster.def}`;
+          node = this.createEntityNode(0x8b0000, monster.name.slice(0, 1), 16, false, tooltip);
           this.monsterNodes.set(monster.id, node);
         }
         node.setPosition(monster.x * TILE + TILE / 2, monster.y * TILE + TILE / 2);
@@ -231,10 +267,15 @@ export class GameScene extends Phaser.Scene {
         itemIds.add(item.id);
         let node = this.itemNodes.get(item.id);
         if (!node) {
+          const name = ITEM_NAME[item.itemType] ?? item.itemType;
+          const effect = describeItemEffect(item.itemType, item.value);
+          const tooltip = effect ? `${name}\n${effect}` : name;
           node = this.createEntityNode(
             ITEM_COLORS[item.itemType] ?? 0xffffff,
             ITEM_GLYPH[item.itemType] ?? "?",
             18,
+            false,
+            tooltip,
           );
           this.itemNodes.set(item.id, node);
         }
@@ -275,8 +316,10 @@ export class GameScene extends Phaser.Scene {
     for (let y = 0; y < floorDef.height; y++) {
       for (let x = 0; x < floorDef.width; x++) {
         const tile = floorDef.tiles[y][x];
-        const opened = floorRuntime?.doorsOpen.get(`${x},${y}`);
-        const color = opened ? TILE_COLORS[TileType.FLOOR] : (TILE_COLORS[tile] ?? TILE_COLORS[TileType.FLOOR]);
+        const doorOpened = floorRuntime?.doorsOpen.get(`${x},${y}`);
+        const gateOpened = tile === TileType.GATE && floorRuntime?.gateOpen;
+        const color =
+          doorOpened || gateOpened ? TILE_COLORS[TileType.FLOOR] : (TILE_COLORS[tile] ?? TILE_COLORS[TileType.FLOOR]);
         this.tileLayer.fillStyle(color, 1);
         this.tileLayer.fillRect(x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2);
       }
@@ -288,13 +331,19 @@ export class GameScene extends Phaser.Scene {
     label: string,
     radius = 16,
     highlight = false,
+    tooltipText?: string,
   ): Phaser.GameObjects.Container {
     const circle = this.add.circle(0, 0, radius, color);
     if (highlight) {
       circle.setStrokeStyle(3, 0xffffff);
     }
     const text = this.add.text(0, 0, label, { fontSize: "16px", color: "#ffffff" }).setOrigin(0.5);
-    return this.add.container(0, 0, [circle, text]);
+    const node = this.add.container(0, 0, [circle, text]);
+    if (tooltipText) {
+      circle.setInteractive({ useHandCursor: true });
+      circle.on("pointerdown", () => this.showTooltip(node.x, node.y, tooltipText));
+    }
+    return node;
   }
 
   private createPlayerNode(character: CharacterId, color: number, highlight: boolean): Phaser.GameObjects.Container {

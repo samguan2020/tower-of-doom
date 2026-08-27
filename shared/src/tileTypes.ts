@@ -7,6 +7,10 @@ export const TileType = {
   DOOR_YELLOW: "Y",
   DOOR_BLUE: "B",
   DOOR_RED: "R",
+  /** Pressure plate: while any player stands on one, all gates on this floor stay open. */
+  PLATE: "P",
+  /** Impassable until held open by a plate (see PLATE); closes a few moves after the last plate is vacated. */
+  GATE: "G",
 } as const;
 
 export type TileCode = (typeof TileType)[keyof typeof TileType];

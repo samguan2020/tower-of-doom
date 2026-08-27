@@ -8,6 +8,8 @@ export const TILE_COLORS: Record<string, number> = {
   [TileType.DOOR_YELLOW]: 0xd4af37,
   [TileType.DOOR_BLUE]: 0x4169e1,
   [TileType.DOOR_RED]: 0xb22222,
+  [TileType.PLATE]: 0x8a6d3b,
+  [TileType.GATE]: 0x4a3f63,
 };
 
 export const ITEM_GLYPH: Record<string, string> = {
@@ -31,3 +33,35 @@ export const ITEM_COLORS: Record<string, number> = {
   key_blue: 0x4169e1,
   key_red: 0xb22222,
 };
+
+export const ITEM_NAME: Record<string, string> = {
+  potion_small: "小型药水",
+  potion_big: "大型药水",
+  sword: "剑",
+  shield: "盾",
+  gold: "金币",
+  key_yellow: "黄钥匙",
+  key_blue: "蓝钥匙",
+  key_red: "红钥匙",
+};
+
+/** One-line effect description for a tap tooltip or pickup log line. */
+export function describeItemEffect(itemType: string, value: number): string {
+  switch (itemType) {
+    case "potion_small":
+    case "potion_big":
+      return `恢复 ${value} 点生命`;
+    case "sword":
+      return `永久 攻击 +${value}`;
+    case "shield":
+      return `永久 防御 +${value}`;
+    case "gold":
+      return `获得 ${value} 金币`;
+    case "key_yellow":
+    case "key_blue":
+    case "key_red":
+      return "可开启一扇同色的门（用一次消耗）";
+    default:
+      return "";
+  }
+}

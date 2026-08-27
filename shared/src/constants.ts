@@ -14,3 +14,11 @@ export const ROOM_NAME = "tower";
 
 /** This MVP is designed for a single shared tower climbed by 1-2 players. */
 export const MAX_PLAYERS = 2;
+
+/**
+ * Moves a gate stays open after the last plate on its floor is vacated.
+ * A second player can hold a plate indefinitely (gate never closes); solo,
+ * this is a tight but doable dash — leave the plate, cross the gate, and
+ * reach the reward within this many moves before it slams shut again.
+ */
+export const GATE_DECAY_MOVES = 3;

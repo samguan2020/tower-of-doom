@@ -42,6 +42,10 @@ export class FloorState extends Schema {
   @type({ map: ItemSchema }) items = new MapSchema<ItemSchema>();
   /** Keyed by "x,y" of the door tile; presence with value true means opened/consumed. */
   @type({ map: "boolean" }) doorsOpen = new MapSchema<boolean>();
+  /** Whether this floor's gate tile(s) are currently passable (see GATE_DECAY_MOVES). */
+  @type("boolean") gateOpen = false;
+  /** Server-only countdown (moves remaining) before an unheld gate closes. Not networked. */
+  gateDecay = 0;
 }
 
 export class TowerState extends Schema {

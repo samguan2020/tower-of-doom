@@ -1,6 +1,7 @@
 import {
   DOOR_TILE_TO_KEY,
   FloorState,
+  GATE_DECAY_MOVES,
   ItemSchema,
   MonsterSchema,
   type PlayerSchema,
@@ -62,6 +63,29 @@ function findItemAt(floor: FloorState, x: number, y: number): ItemSchema | undef
   return undefined;
 }
 
+/** True if any player currently on `floorId` is standing on a PLATE tile. */
+function isAnyPlateHeld(state: TowerState, floorId: number, tiles: string[][]): boolean {
+  for (const other of state.players.values()) {
+    if (other.floorId !== floorId) continue;
+    if (tiles[other.y]?.[other.x] === TileType.PLATE) return true;
+  }
+  return false;
+}
+
+/**
+ * Recomputes whether this floor's gate(s) are open: held open while any
+ * plate is occupied, otherwise decaying closed over GATE_DECAY_MOVES moves.
+ */
+function updateGateState(state: TowerState, floorId: number, floorRuntime: FloorState, tiles: string[][]): void {
+  const held = isAnyPlateHeld(state, floorId, tiles);
+  if (held) {
+    floorRuntime.gateDecay = GATE_DECAY_MOVES;
+  } else if (floorRuntime.gateDecay > 0) {
+    floorRuntime.gateDecay -= 1;
+  }
+  floorRuntime.gateOpen = held || floorRuntime.gateDecay > 0;
+}
+
 function grantKey(player: PlayerSchema, color: string, delta: number): void {
   if (color === "yellow") player.keysYellow += delta;
   else if (color === "blue") player.keysBlue += delta;
@@ -119,10 +143,12 @@ export function applyMove(
   const ny = player.y + dy;
   if (nx < 0 || ny < 0 || nx >= floorDef.width || ny >= floorDef.height) return [];
 
+  const floorRuntime = ensureFloorRuntime(state, player.floorId);
+  updateGateState(state, player.floorId, floorRuntime, floorDef.tiles);
+
   const tile = floorDef.tiles[ny][nx];
   if (tile === TileType.WALL) return [];
-
-  const floorRuntime = ensureFloorRuntime(state, player.floorId);
+  if (tile === TileType.GATE && !floorRuntime.gateOpen) return [];
 
   const doorKeyColor = DOOR_TILE_TO_KEY[tile];
   if (doorKeyColor) {
@@ -163,10 +189,11 @@ export function applyMove(
   if (item) {
     applyItem(player, item);
     const itemType = item.itemType;
+    const value = item.value;
     floorRuntime.items.delete(item.id);
     player.x = nx;
     player.y = ny;
-    return [{ type: "itemPickup", itemType }];
+    return [{ type: "itemPickup", itemType, value }];
   }
 
   if (tile === TileType.STAIR_UP) {

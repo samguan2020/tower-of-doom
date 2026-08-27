@@ -10,4 +10,4 @@ export type ServerEvent =
   | { type: "unwinnable"; monsterName: string }
   | { type: "floorChange"; floorId: number }
   | { type: "victory" }
-  | { type: "itemPickup"; itemType: string };
+  | { type: "itemPickup"; itemType: string; value: number };

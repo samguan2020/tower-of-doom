@@ -45,6 +45,20 @@ math before you commit to it.
 - A locked door tile is impassable until the player holds at least one key
   of the matching color. Stepping onto it consumes one key and permanently
   opens the door for everyone in the room (it becomes passable floor).
+- **Plates and gates** (co-op-favoring bonus content, not on the critical
+  path): a gate tile is impassable unless "held open." It is held open on
+  any move-tick where a player is standing on a linked plate tile, and stays
+  open for `GATE_DECAY_MOVES` (3) additional moves by anyone on that floor
+  after the last plate is vacated before slamming shut again. With two
+  players, one can stand on the plate indefinitely while the other strolls
+  through at leisure. Solo, it is a tight dash: leave the plate and reach
+  the reward within the decay window, with zero margin for a wrong turn or
+  a detour into combat. First instance: floor 2's 1-tile bonus vault
+  (`f2_vault_gold`).
+- Tapping/clicking a monster or item on the map shows a tooltip with its
+  full name and effect (HP/ATK/DEF for monsters, heal/stat/gold amount for
+  items) — the in-world glyph is a single character purely for space, not
+  the whole of the available information.
 - Stepping onto a stair-up tile moves the player to the next floor, landing
   at that floor's `spawnFromBelow` position. Stepping onto a stair-down tile
   does the reverse via `spawnFromAbove`. Floors persist their state (dead
