@@ -15,7 +15,7 @@ import { applyMove, ensureFloorRuntime } from "../gameLogic/applyMove.js";
 // Mobile browsers suspend/close background WebSocket connections aggressively
 // (app switching, screen lock). Give a generous grace period before actually
 // dropping the player, so the client can reconnect with its session intact.
-const RECONNECTION_GRACE_SECONDS = 300;
+const RECONNECTION_GRACE_SECONDS = 600;
 
 interface JoinOptions {
   name?: string;
