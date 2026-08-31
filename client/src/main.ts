@@ -56,6 +56,10 @@ function startGame(room: Room<TowerState>, characterIcons: Record<CharacterId, H
     type: Phaser.AUTO,
     parent: "gameContainer",
     backgroundColor: "#14121a",
+    // The game has no sound assets; skip Phaser's WebAudio setup entirely so mobile
+    // browsers don't throw "failed to start the audio device" when the AudioContext
+    // tries to auto-resume after the app returns from the background.
+    audio: { noAudio: true },
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
