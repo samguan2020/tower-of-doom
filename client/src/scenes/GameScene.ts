@@ -1,7 +1,7 @@
 import type { Room } from "colyseus.js";
 import Phaser from "phaser";
 import { CHARACTER_IDS, TileType, getFloor, type CharacterId, type FloorDef, type FloorState, type ServerEvent, type TowerState } from "@tower/shared";
-import { onServerEvent, watchState } from "../net/NetworkClient.js";
+import { clearReconnectionToken, onServerEvent, reconnectTowerRoom, watchState } from "../net/NetworkClient.js";
 import { characterTextureKey } from "../render/characterArt.js";
 import { describeItemEffect, ITEM_COLORS, ITEM_GLYPH, ITEM_NAME, TILE_COLORS } from "../render/tileColors.js";
 
@@ -32,6 +32,8 @@ export class GameScene extends Phaser.Scene {
   private tooltipText!: Phaser.GameObjects.Text;
   private tooltipBg!: Phaser.GameObjects.Rectangle;
   private tooltipHideAt = 0;
+  private isConnected = true;
+  private reconnecting = false;
 
   constructor() {
     super("Game");
@@ -62,13 +64,6 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(1, 0x8338ec);
     this.tooltip = this.add.container(0, 0, [this.tooltipBg, this.tooltipText]).setDepth(1000).setVisible(false);
 
-    this.room.onError((code, message) => {
-      this.hudEl.textContent = `房间错误 (${code}): ${message ?? "未知"}`;
-    });
-    this.room.onLeave((code) => {
-      this.hudEl.textContent = `已断线 (code ${code})，请刷新页面重新加入`;
-    });
-
     const keyboard = this.input.keyboard;
     if (keyboard) {
       this.cursors = keyboard.createCursorKeys();
@@ -77,6 +72,30 @@ export class GameScene extends Phaser.Scene {
       this.keyS = keyboard.addKey("S");
       this.keyD = keyboard.addKey("D");
     }
+
+    this.bindRoom();
+    this.setupDpad();
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    this.events.once("shutdown", () => {
+      document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    });
+
+    setTimeout(() => {
+      if (this.renderedFloorId === -1) {
+        this.hudEl.textContent = "长时间未收到游戏状态数据，可能是网络不稳定，请尝试刷新页面或更换网络";
+      }
+    }, 6000);
+  }
+
+  /** (Re-)attaches all room event/state listeners. Called on initial join and after every reconnect. */
+  private bindRoom(): void {
+    this.room.onError((code, message) => {
+      this.hudEl.textContent = `房间错误 (${code}): ${message ?? "未知"}`;
+    });
+    this.room.onLeave(() => {
+      this.isConnected = false;
+      void this.tryReconnect();
+    });
 
     const $ = watchState(this.room);
     const state = this.room.state;
@@ -114,13 +133,53 @@ export class GameScene extends Phaser.Scene {
     });
 
     onServerEvent(this.room, (event) => this.handleEvent(event));
-    this.setupDpad();
+  }
 
-    setTimeout(() => {
-      if (this.renderedFloorId === -1) {
-        this.hudEl.textContent = "长时间未收到游戏状态数据，可能是网络不稳定，请尝试刷新页面或更换网络";
+  private handleVisibilityChange = (): void => {
+    if (document.visibilityState === "visible" && !this.isConnected && !this.reconnecting) {
+      void this.tryReconnect();
+    }
+  };
+
+  /** Retries reconnectTowerRoom() with backoff for as long as the server's reconnection grace window allows. */
+  private async tryReconnect(): Promise<void> {
+    if (this.reconnecting) return;
+    this.reconnecting = true;
+
+    const maxAttempts = 10;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      this.hudEl.textContent = "网络已断开，正在尝试重新连接...";
+      try {
+        const room = await reconnectTowerRoom();
+        this.swapRoom(room);
+        this.isConnected = true;
+        this.reconnecting = false;
+        this.hudEl.textContent = "已重新连接";
+        return;
+      } catch (err) {
+        console.warn("reconnect attempt failed", err);
+        const delay = Math.min(2000 * (attempt + 1), 20000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
-    }, 6000);
+    }
+
+    this.reconnecting = false;
+    clearReconnectionToken();
+    this.hudEl.textContent = "重新连接失败，请刷新页面重新加入";
+  }
+
+  /** Swaps in a freshly reconnected Room and forces a full re-render, since old node caches may be stale. */
+  private swapRoom(room: Room<TowerState>): void {
+    this.room = room;
+    for (const node of this.monsterNodes.values()) node.destroy();
+    for (const node of this.itemNodes.values()) node.destroy();
+    for (const node of this.playerNodes.values()) node.destroy();
+    this.monsterNodes.clear();
+    this.itemNodes.clear();
+    this.playerNodes.clear();
+    this.renderedFloorId = -1;
+    this.dirty = true;
+    this.bindRoom();
   }
 
   private setupDpad(): void {

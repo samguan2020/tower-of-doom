@@ -12,6 +12,11 @@ import {
 } from "@tower/shared";
 import { applyMove, ensureFloorRuntime } from "../gameLogic/applyMove.js";
 
+// Mobile browsers suspend/close background WebSocket connections aggressively
+// (app switching, screen lock). Give a generous grace period before actually
+// dropping the player, so the client can reconnect with its session intact.
+const RECONNECTION_GRACE_SECONDS = 300;
+
 interface JoinOptions {
   name?: string;
   character?: CharacterId;
@@ -61,7 +66,17 @@ export class TowerRoom extends Room<TowerState> {
     this.state.players.set(client.sessionId, player);
   }
 
-  onLeave(client: Client): void {
-    this.state.players.delete(client.sessionId);
+  async onLeave(client: Client, consented: boolean): Promise<void> {
+    if (consented) {
+      this.state.players.delete(client.sessionId);
+      return;
+    }
+
+    try {
+      await this.allowReconnection(client, RECONNECTION_GRACE_SECONDS);
+      // client reconnected in time — player stays in this.state.players
+    } catch {
+      this.state.players.delete(client.sessionId);
+    }
   }
 }

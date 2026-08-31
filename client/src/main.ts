@@ -1,7 +1,9 @@
 import type { CharacterId } from "@tower/shared";
+import type { Room } from "colyseus.js";
+import type { TowerState } from "@tower/shared";
 import Phaser from "phaser";
 import { CHARACTER_SVG, rasterizeCharacterIcons } from "./render/characterArt.js";
-import { joinTowerRoom } from "./net/NetworkClient.js";
+import { clearReconnectionToken, joinTowerRoom, loadReconnectionToken, reconnectTowerRoom } from "./net/NetworkClient.js";
 import { GameScene } from "./scenes/GameScene.js";
 
 const lobby = document.getElementById("lobby") as HTMLDivElement;
@@ -46,6 +48,26 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
+function startGame(room: Room<TowerState>, characterIcons: Record<CharacterId, HTMLCanvasElement>): void {
+  lobby.style.display = "none";
+  app.style.display = "flex";
+
+  const config: Phaser.Types.Core.GameConfig = {
+    type: Phaser.AUTO,
+    parent: "gameContainer",
+    backgroundColor: "#14121a",
+    scale: {
+      mode: Phaser.Scale.FIT,
+      autoCenter: Phaser.Scale.CENTER_BOTH,
+      width: 384,
+      height: 384,
+    },
+    scene: [],
+  };
+  const game = new Phaser.Game(config);
+  game.scene.add("Game", GameScene, true, { room, characterIcons });
+}
+
 async function join(): Promise<void> {
   if (!selectedCharacter) {
     statusEl.textContent = "请先选择角色（公主或勇士）";
@@ -60,23 +82,7 @@ async function join(): Promise<void> {
       Promise.all([joinTowerRoom(name, selectedCharacter), rasterizeCharacterIcons()]),
       10000,
     );
-    lobby.style.display = "none";
-    app.style.display = "flex";
-
-    const config: Phaser.Types.Core.GameConfig = {
-      type: Phaser.AUTO,
-      parent: "gameContainer",
-      backgroundColor: "#14121a",
-      scale: {
-        mode: Phaser.Scale.FIT,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 384,
-        height: 384,
-      },
-      scene: [],
-    };
-    const game = new Phaser.Game(config);
-    game.scene.add("Game", GameScene, true, { room, characterIcons });
+    startGame(room, characterIcons);
   } catch (err) {
     console.error(err);
     const detail = err instanceof Error ? err.message : String(err);
@@ -89,3 +95,21 @@ joinBtn.addEventListener("click", () => void join());
 nameInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") void join();
 });
+
+// If the OS fully reloaded the page while backgrounded (not just suspended the socket),
+// silently rejoin the previous session instead of forcing the player back to the lobby.
+(async () => {
+  if (!loadReconnectionToken()) return;
+  statusEl.textContent = "正在恢复上次的连接...";
+  try {
+    const [room, characterIcons] = await withTimeout(
+      Promise.all([reconnectTowerRoom(), rasterizeCharacterIcons()]),
+      8000,
+    );
+    startGame(room, characterIcons);
+  } catch (err) {
+    console.warn("auto-reconnect on load failed, falling back to lobby", err);
+    clearReconnectionToken();
+    statusEl.textContent = "";
+  }
+})();
