@@ -1,8 +1,7 @@
 import type { FloorDef } from "../types.js";
 
-// Mid-tower floor (no longer the final boss floor now that the tower runs to 50).
-export const floor5: FloorDef = {
-  id: 5,
+export const floor12: FloorDef = {
+  id: 12,
   width: 8,
   height: 8,
   tiles: [
@@ -16,13 +15,12 @@ export const floor5: FloorDef = {
     ["#", "#", "#", "#", "#", "#", "#", "#"],
   ],
   monsters: [
-    { id: "f5_gargoyle", x: 2, y: 2, name: "石像鬼", hp: 55, atk: 23, def: 10, goldReward: 70 },
-    { id: "f5_sorcerer", x: 5, y: 4, name: "妖法师", hp: 60, atk: 25, def: 8, goldReward: 75 },
+    { id: "f12_troll", x: 2, y: 3, name: "巨魔", hp: 120, atk: 48, def: 20, goldReward: 160 },
+    { id: "f12_wight", x: 5, y: 2, name: "怨灵", hp: 130, atk: 50, def: 18, goldReward: 170 },
   ],
   items: [
-    { id: "f5_pot1", x: 3, y: 1, type: "potion_big", value: 100 },
-    { id: "f5_shield3", x: 1, y: 4, type: "shield", value: 4 },
-    { id: "f5_sword3", x: 4, y: 3, type: "sword", value: 6 },
+    { id: "f12_shield7", x: 1, y: 1, type: "shield", value: 8 },
+    { id: "f12_potbig", x: 4, y: 4, type: "potion_big", value: 150 },
   ],
   spawnFromBelow: { x: 1, y: 6 },
   spawnFromAbove: { x: 6, y: 6 },

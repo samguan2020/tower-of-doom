@@ -16,8 +16,8 @@ export const floor1: FloorDef = {
     ["#", "#", "#", "#", "#", "#", "#", "#"],
   ],
   monsters: [
-    { id: "f1_slime", x: 2, y: 4, name: "史莱姆", hp: 20, atk: 5, def: 2, goldReward: 10 },
-    { id: "f1_bat", x: 6, y: 3, name: "蝙蝠", hp: 15, atk: 6, def: 1, goldReward: 8 },
+    { id: "f1_slime", x: 2, y: 4, name: "史莱姆", hp: 24, atk: 12, def: 2, goldReward: 12 },
+    { id: "f1_bat", x: 6, y: 3, name: "蝙蝠", hp: 18, atk: 13, def: 1, goldReward: 10 },
   ],
   items: [
     { id: "f1_key1", x: 3, y: 1, type: "key_yellow", value: 1 },

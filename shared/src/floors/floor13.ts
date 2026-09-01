@@ -1,7 +1,8 @@
 import type { FloorDef } from "../types.js";
 
-export const floor3: FloorDef = {
-  id: 3,
+// Red door at (4,1) gates the right half (U, sword) — grab the key on the left first.
+export const floor13: FloorDef = {
+  id: 13,
   width: 8,
   height: 8,
   tiles: [
@@ -15,13 +16,13 @@ export const floor3: FloorDef = {
     ["#", "#", "#", "#", "#", "#", "#", "#"],
   ],
   monsters: [
-    { id: "f3_orc", x: 2, y: 3, name: "兽人", hp: 36, atk: 18, def: 7, goldReward: 45 },
-    { id: "f3_wraith", x: 6, y: 4, name: "幽魂", hp: 42, atk: 20, def: 6, goldReward: 50 },
+    { id: "f13_bonewraith", x: 2, y: 2, name: "尸骨幽魂", hp: 132, atk: 52, def: 22, goldReward: 180 },
+    { id: "f13_direwarden", x: 5, y: 4, name: "地狱守卫", hp: 144, atk: 54, def: 20, goldReward: 190 },
   ],
   items: [
-    { id: "f3_key1", x: 3, y: 2, type: "key_red", value: 1 },
-    { id: "f3_pot1", x: 1, y: 4, type: "potion_big", value: 60 },
-    { id: "f3_sword2", x: 5, y: 5, type: "sword", value: 5 },
+    { id: "f13_key1", x: 2, y: 3, type: "key_red", value: 1 },
+    { id: "f13_pot6", x: 3, y: 5, type: "potion_small", value: 60 },
+    { id: "f13_sword6", x: 5, y: 2, type: "sword", value: 8 },
   ],
   spawnFromBelow: { x: 1, y: 6 },
   spawnFromAbove: { x: 6, y: 6 },
